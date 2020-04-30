@@ -1,0 +1,16 @@
+defaultEntryPoints = ["http"]
+logLevel = "DEBUG"
+
+[docker]
+domain = "go.local"
+watch = true
+# This will hide all docker containers that don't have explicitly
+# set label to "enable"
+exposedbydefault = false
+
+[web]
+address = ":8080"
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"

@@ -1,0 +1,79 @@
+version: '3.7'
+
+services:
+  go-app:
+    container_name: go-app
+    build:
+      context: .
+      target: dev
+    depends_on:
+      - go-balancer
+      - go-db
+      - go-mailer
+    image: go-app:dev
+    env_file:
+      - .env
+    labels:
+      - traefik.frontend.rule=Host:app.go.local
+      - traefik.port=8080
+      - traefik.enable=true
+    volumes:
+      - .:/app:rw,delegated
+
+  go-balancer:
+    container_name: go-balancer
+    command: --api --docker --docker.exposedbydefault=false
+    image: traefik:1.7-alpine
+    labels:
+      - traefik.backend.healthcheck.enable=false
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:lb.go.local
+      - traefik.port=8080
+    ports:
+      - 80:80
+    volumes:
+      - ./.ops/traefik.toml:/traefik.toml
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  go-db:
+    container_name: go-db
+    image: mysql:8.0
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - go-db-data:/var/lib/mysql
+
+  go-pma:
+    container_name: go-pma
+    depends_on:
+      - go-balancer
+      - go-db
+    env_file:
+      - .env
+    environment:
+      - PMA_ABSOLUTE_URI=http://pma.go.local
+      - PMA_HOST=go-db
+      - PMA_USER=${DB_USER}
+      - PMA_PASSWORD=${DB_PASSWORD}
+    image: phpmyadmin/phpmyadmin:latest
+    labels:
+      - traefik.frontend.rule=Host:pma.go.local
+      - traefik.enable=true
+
+  go-mailer:
+    container_name: go-mailer
+    depends_on:
+      - go-balancer
+    image: mailhog/mailhog:latest
+    labels:
+      - traefik.frontend.rule=Host:mailer.go.local
+      - traefik.port=8025
+      - traefik.enable=true
+
+volumes:
+  go-db-data: {}

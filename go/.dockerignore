@@ -1,0 +1,9 @@
+### Ignore it all by default, handle exceptions ###
+*
+
+### Application ###
+!/controllers
+!/models
+!/go.mod
+!/go.sum
+!/main.go
